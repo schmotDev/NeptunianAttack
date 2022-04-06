@@ -1,25 +1,26 @@
 local Game = {}
 
 
-Game.imgStart = love.graphics.newImage("images/start.png")
-Game.imgHelp = love.graphics.newImage("images/help.png")
-Game.imgDead = love.graphics.newImage("images/dead.png")
-Game.imgWin = love.graphics.newImage("images/win.png")
+imgStart = love.graphics.newImage("images/start.png")
+imgHelp = love.graphics.newImage("images/help.png")
+imgDead = love.graphics.newImage("images/dead.png")
+imgWin = love.graphics.newImage("images/win.png")
 
-Game.sndExplose = love.audio.newSource("sons/crash.wav", "static")
+sndExplose = love.audio.newSource("sons/crash.wav", "static")
+ 
+warning = false
+warningCount = 100
+imgWarning = love.graphics.newImage("images/warning.png")
+sndWarning = love.audio.newSource("sons/alarm.wav", "static")
 
-Game.warning = false
-Game.warningCount = 100
-Game.imgWarning = love.graphics.newImage("images/warning.png")
-Game.sndWarning = love.audio.newSource("sons/alarm.wav", "static")
-
-Game.transition = false
-Game.transitionTimer = 200
-Game.imgTransition = love.graphics.newImage("images/transition.png")
+transition = false
+transitionTimer = 200
+imgTransition = love.graphics.newImage("images/transition.png")
 
 myNiveau = require("niveau")
-Game.currentNiveau = 1
-Game.maxNiveau = 7
+currentNiveau = 1
+maxNiveau = 7
+
 
 Game.myHero = {}
 Game.myHero.image = love.graphics.newImage("images/shipHero.png")
@@ -30,37 +31,67 @@ Game.myHero.y = 0
 Game.myHero.vx = 0
 Game.myHero.vy = 0
 
-Game.myHero.listeTirs = {}
-Game.myHero.sndTir = love.audio.newSource("sons/shoot.wav", "static")
-Game.myHero.sndShoot = love.audio.newSource("sons/explode_touch.wav", "static")
+listeTirsHero = {}
+sndTirHero = love.audio.newSource("sons/shoot.wav", "static")
+sndShootHero = love.audio.newSource("sons/explode_touch.wav", "static")
 
-Game.listeTirsAlien = {}
+listeTirsAlien = {}
 
-Game.myHero.imgCrash = {}
-local i
-for i = 1,5 do
-  Game.myHero.imgCrash[i] = love.graphics.newImage("images/explode_"..i..".png")
+imgHeroCrash = {}
+imgHeroCrash.image = love.graphics.newImage("images/heroCrashSheet1.png")
+local i = 1
+local co,li
+for li = 1,3 do
+  for co =1,5 do
+    imgHeroCrash[i] = love.graphics.newQuad(64*(co-1), 64*(li-1), 64,64, imgHeroCrash.image:getWidth(), imgHeroCrash.image:getHeight())
+    i = i + 1
+  end
 end
-Game.myHero.crashFrame = 1
-Game.myHero.crash_vy = 0
+HeroCrashFrame = 1
+HeroCrash_X = 0
+HeroCrash_Y = 0
+HeroCrash_vy = 0
+HeroCrash_vx = 0
 
-Game.myHero.imgExplose = {}
+imgHeroExplose = {}
 local id
 for id = 1,9 do
-  Game.myHero.imgExplose[id] = love.graphics.newImage("images/explosion"..id..".png")
+  imgHeroExplose[id] = love.graphics.newImage("images/explosion"..id..".png")
 end
-Game.myHero.exploseFrame = 1
-Game.myHero.exploseX = 0
-Game.myHero.exploseY = 0
+HeroExploseFrame = 1
+HeroExploseX = 0
+HeroEXploseY = 0
 
-Game.alienExplose = {}
-Game.imgAlienExplose = {}
+
+imgBossExplose = {}
+imgBossExplose.image = love.graphics.newImage("images/BossExploseSheet.png")
+local ib = 1
+local c,l
+for l = 1,5 do
+  for c = 1,5 do
+    imgBossExplose[ib] = love.graphics.newQuad(64*(c-1), 64*(l-1), 64, 64, imgBossExplose.image:getWidth(), imgBossExplose.image:getHeight())
+    ib = ib +1
+  end
+end
+bossExploseFrame = 1
+bossExplose = false
+
+
+
+alienExploseListe = {}
+imgAlienEXplose = {}
 local y
 for y = 1,5 do
-  Game.imgAlienExplose[y] = love.graphics.newImage("images/explode_"..y..".png")
+  imgAlienEXplose[y] = love.graphics.newImage("images/explode_"..y..".png")
 end
 
-Game.imgBossEnergy = love.graphics.newImage("images/boss_energy.png")
+imgBossEnergy = love.graphics.newImage("images/boss_energy.png")
+targetBoss = {}
+targetBoss.image = love.graphics.newImage("images/targetboss.png")
+targetBoss.x = 233
+targetBoss.y = 267
+targetBossFade = 0
+targetBossFadeSens = -1
 
 function math.angle(x1,y1, x2,y2) return math.atan2(y2-y1, x2-x1) end
 
@@ -68,10 +99,11 @@ function CreeAlienExplose(pX, pY)
   local explo = {}
   explo.x = pX
   explo.y = pY
-  explo.listeFrames = Game.imgAlienExplose
+  explo.listeFrames = imgAlienEXplose
   explo.frame = 1
-  table.insert(Game.alienExplose, explo)
+  table.insert(alienExploseListe, explo)
 end
+
 
 function collision(a1, a2)
   if (a1==a2) then return false end
@@ -84,35 +116,38 @@ end
 function Game.initHero()
   Game.myHero.status = "playing"
   
-  Game.myHero.crashFrame = 1
-  Game.myHero.exploseFrame = 1
+  HeroCrashFrame = 1
+  HeroCrash_vy = 0
+  HeroCrash_vx = 0
+
+  HeroExploseFrame = 1
   
   local n
-  for n=1,#Game.myHero.listeTirs do
-    table.remove(Game.myHero.listeTirs, n)
+  for n=1,#listeTirsHero do
+    table.remove(listeTirsHero, n)
   end
 end
 
 
-function Game.myHero.CreeTir()
+function Game.CreeTirHero()
   local tir = {}
   tir.image = love.graphics.newImage("images/shootHero.png")
   tir.x = Game.myHero.x + 26
   tir.y = Game.myHero.y + 26 - tir.image:getHeight()/2
   tir.vx = 10
-  table.insert(Game.myHero.listeTirs, tir)
-  Game.myHero.sndTir:play()
+  table.insert(listeTirsHero, tir)
+  sndTirHero:play()
 end
 
-function Game.CreeTirAlien(pX, pY, pVX, pVY)
+function CreeTirAlien(pX, pY, pVX, pVY)
   local tirAlien = {}
   tirAlien.image = love.graphics.newImage("images/tirAlien.png")
   tirAlien.x = pX
   tirAlien.y = pY
   tirAlien.vx = pVX
   tirAlien.vy = pVY
-  table.insert(Game.listeTirsAlien, tirAlien)
-  --Game.myHero.sndTir:play()
+  table.insert(listeTirsAlien, tirAlien)
+  --sndTirHero:play()
 end
 
 function Game.load()
@@ -124,18 +159,18 @@ function Game.load()
   for i=#myNiveau.liste_enemy, 1, -1 do
     table.remove(myNiveau.liste_enemy, i)
   end
-  for i=#Game.listeTirsAlien, 1, -1 do
-    table.remove(Game.listeTirsAlien, i)
+  for i=#listeTirsAlien, 1, -1 do
+    table.remove(listeTirsAlien, i)
   end
   
   Game.ecran = "start"
   myNiveau.setNiveau(1)
-  Game.currentNiveau = 1
-  Game.transition = false
-  Game.transitionTimer = 200
+  currentNiveau = 1
+  transition = false
+  transitionTimer = 200
   
-  Game.warning = false
-  Game.warningCount = 100
+  warning = false
+  warningCount = 100
 
   Game.myHero.x = 10
   Game.myHero.y = Game.hauteur/2 - Game.myHero.hauteur/2
@@ -170,8 +205,7 @@ function Game.update(dt)
         --if alien.y == (((Game.hauteur - 400) - alien.image:getHeight()*2)/2) + alien.image:getHeight()*2 then
         
       end
-      if alien.type == "boss" then
-        if alien.x < Game.largeur *2/3 then alien.vx = 0 end
+      if alien.shooter == true then
         alien.timerTir = alien.timerTir - 1
         if alien.timerTir <= 0 then
           alien.timerTir = 30
@@ -180,47 +214,58 @@ function Game.update(dt)
           angle = math.angle(alien.x+alien.image:getWidth()/2, alien.y+alien.image:getHeight()/2, Game.myHero.x, Game.myHero.y)
           vx = 10 * math.cos(angle)
           vy = 10 * math.sin(angle)
-          Game.CreeTirAlien(alien.x+alien.image:getWidth()/2, alien.y+alien.image:getHeight()/2, vx, vy)
+          CreeTirAlien(alien.x+alien.image:getWidth()/2, alien.y+alien.image:getHeight()/2, vx, vy)
         end  
+      end
+      
+      if alien.type == "boss" then
+        targetBoss.x = alien.x+233
+        targetBoss.y = alien.y+267
+        if alien.x < Game.largeur *2/3 then alien.vx = 0 end
+        
+        targetBossFade = targetBossFade + targetBossFadeSens*dt
+        if targetBossFade < 0 or targetBossFade > 1 then targetBossFadeSens = targetBossFadeSens*(-1) end
+        
+        
       end
       
       if (alien.x + alien.image:getWidth()) < 0 then
         table.remove(myNiveau.liste_enemy, i)
       end
-      if alien.x <= Game.largeur then 
+      if alien.x <= (Game.largeur) then 
         alien.visible = true
       end
     end
   
     -- on bouge les tirs du hero
     local n
-    for n=#Game.myHero.listeTirs,1,-1 do
-      local t = Game.myHero.listeTirs[n]
+    for n=#listeTirsHero,1,-1 do
+      local t = listeTirsHero[n]
       t.x = t.x + t.vx
       if t.x > Game.largeur then
-        table.remove(Game.myHero.listeTirs, n)
+        table.remove(listeTirsHero, n)
       end
     end
     
     local na
-    for na=#Game.listeTirsAlien,1,-1 do
-      local t = Game.listeTirsAlien[na]
+    for na=#listeTirsAlien,1,-1 do
+      local t = listeTirsAlien[na]
       t.x = t.x + t.vx
       t.y = t.y + t.vy
       if t.x > Game.largeur or t.x < 0 or t.y < 0 or t.y > Game.hauteur then
-        table.remove(Game.listeTirsAlien, na)
+        table.remove(listeTirsAlien, na)
       end
     end
     
     
     -- on check la liste des ennmis, si elle est vide on passe au niveau suivant
     if #myNiveau.liste_enemy == 0 and Game.myHero.status == "playing" then
-      Game.transition = true
+      transition = true
     end
   
     -- si le hero est playing ou warning il peut bouger
     if (Game.myHero.status == "warning" or Game.myHero.status == "playing") then
-      if love.keyboard.isDown("w") or love.keyboard.isDown("z") and Game.myHero.y > 0 then
+      if (love.keyboard.isDown("w") or love.keyboard.isDown("z")) and Game.myHero.y > 0 then
           Game.myHero.y = Game.myHero.y - 3
       end
       if love.keyboard.isDown("d") and Game.myHero.x < Game.largeur/2 then
@@ -229,25 +274,25 @@ function Game.update(dt)
       if love.keyboard.isDown("s") and Game.myHero.y+Game.myHero.hauteur < Game.hauteur then
           Game.myHero.y = Game.myHero.y + 3
       end
-      if love.keyboard.isDown("a") or love.keyboard.isDown("q") and Game.myHero.x > 0 then
+      if (love.keyboard.isDown("a") or love.keyboard.isDown("q")) and Game.myHero.x > 0 then
           Game.myHero.x = Game.myHero.x - 3
       end
     
       -- on check si le hero vole trop bas
       if Game.myHero.y > Game.hauteur - Game.myHero.hauteur - 200 then
         Game.myHero.status = "warning"
-        Game.warningCount = Game.warningCount - 1*(60*dt)
-        Game.sndWarning:play()
-        if Game.warningCount < 0 then 
+        warningCount = warningCount - 1*(60*dt)
+        sndWarning:play()
+        if warningCount < 0 then 
           Game.myHero.status = "crashing"
           --Game.ecran = "crashing"
-          --Game.warning = false
-          Game.sndExplose:play()
+          --warning = false
+          sndExplose:play()
         end
       else
         Game.myHero.status = "playing"
-        --Game.warning = false
-        Game.warningCount = 100
+        --warning = false
+        warningCount = 100
       end
       
       -- on check si collision hero avec enemis
@@ -257,88 +302,130 @@ function Game.update(dt)
         if collision(Game.myHero, alien) == true then
           Game.myHero.status = "shooted"
           table.remove(myNiveau.liste_enemy, i)
-          Game.myHero.exploseX = Game.myHero.x
-          Game.myHero.exploseY = Game.myHero.y
+          HeroExploseX = Game.myHero.x
+          HeroEXploseY = Game.myHero.y
         end
       end
       
       for i=#myNiveau.liste_enemy, 1, -1 do
         local alien
         alien = myNiveau.liste_enemy[i]
-        for t=#Game.myHero.listeTirs,1,-1 do
-          local tir = Game.myHero.listeTirs[t]
-          if collision(tir, alien) == true then
-            alien.energy = alien.energy - 10
-            table.remove(Game.myHero.listeTirs, t)
-            CreeAlienExplose(alien.x+alien.image:getWidth()/2, alien.y+alien.image:getHeight()/2)
-            Game.myHero.sndShoot:play()
-            if alien.energy == 0 then
-              table.remove(myNiveau.liste_enemy, i)
-            end
+        
+        for t=#listeTirsHero,1,-1 do
+          local tir = listeTirsHero[t]
+        
+        
+          if alien.type == "boss" then
+            if collision(tir, targetBoss) then
+              alien.energy = alien.energy - 10
+              CreeAlienExplose(targetBoss.x-20, targetBoss.y-20)
+              sndShootHero:play()
+              table.remove(listeTirsHero, t)
+              if alien.energy == 0 then
+                table.remove(myNiveau.liste_enemy, i)
+                bossExplose = true
+              end
+            end  
+          elseif collision(tir, alien) == true then
+              alien.energy = alien.energy - 10
+              CreeAlienExplose(alien.x, alien.y)
+              sndShootHero:play()
+              table.remove(listeTirsHero, t)
+              if alien.energy == 0 then
+                table.remove(myNiveau.liste_enemy, i)
+              end
           end
+        end
+        
+        
+      end
+      
+      for na=#listeTirsAlien,1,-1 do
+        local t = listeTirsAlien[na]
+        if collision(Game.myHero, t) == true then
+          Game.myHero.status = "shooted"
+          table.remove(listeTirsAlien, na)
+          HeroExploseX = Game.myHero.x
+          HeroEXploseY = Game.myHero.y
         end
       end
       
-      for ex=#Game.alienExplose,1,-1 do
+      
+      for ex=#alienExploseListe,1,-1 do
         local explo
-        explo = Game.alienExplose[ex]
+        explo = alienExploseListe[ex]
         explo.frame = explo.frame + 0.4
         if math.floor(explo.frame) >= 5 then
-          table.remove(Game.alienExplose, ex)
+          table.remove(alienExploseListe, ex)
         end
           
       end
       
       
-      if Game.transition == true then
-        Game.transitionTimer = Game.transitionTimer - 1
-        if Game.transitionTimer == 0 then
-          Game.transitionTimer = 200
-          Game.transition = false
-          Game.currentNiveau = Game.currentNiveau + 1
-          if Game.currentNiveau > Game.maxNiveau then
+      if transition == true then
+        transitionTimer = transitionTimer - 1
+        if transitionTimer == 0 then
+          transitionTimer = 200
+          transition = false
+          currentNiveau = currentNiveau + 1
+          if currentNiveau > maxNiveau then
             Game.ecran = "winner"
           end
-          myNiveau.setNiveau(Game.currentNiveau)
+          myNiveau.setNiveau(currentNiveau)
           Game.initHero()
         end
       end
     end
     
     if Game.myHero.status == "crashing" then
-      Game.myHero.crashFrame = Game.myHero.crashFrame + 0.02
-      Game.myHero.crash_vy = (Game.hauteur-Game.myHero.y)/5 * (Game.myHero.crashFrame-2)
-      if math.floor(Game.myHero.crashFrame) >= 6 then
+      HeroCrashFrame = HeroCrashFrame + 0.08
+      HeroCrash_vy = (Game.hauteur-Game.myHero.y)/5 * (HeroCrashFrame-2)
+      HeroCrash_X = Game.myHero.x + HeroCrash_vx--+ math.random(-10,10)
+      HeroCrash_Y = Game.myHero.y + HeroCrash_vy --+ math.random(-10,10) + HeroCrash_vy
+      if math.floor(HeroCrashFrame) >= 16 then
         Game.myHero.status = "dead"
         --Game.ecran = "dead"
+      else
+        local image = imgHeroCrash[math.floor(HeroCrashFrame)]
+        if HeroCrash_Y >= (Game.hauteur-64) then 
+          HeroCrash_Y = (Game.hauteur-64)
+          HeroCrash_vx = HeroCrash_vx -2
+        end
       end
       
     end
     
     if Game.myHero.status == "shooted" then
-      Game.myHero.exploseFrame = Game.myHero.exploseFrame + 0.18
-        --Game.myHero.crash_vy = (Game.hauteur-Game.myHero.exploseY)/5 * (Game.myHero.crashFrame-2)
-      if math.floor(Game.myHero.exploseFrame) >= 10 then
+      HeroExploseFrame = HeroExploseFrame + 0.18
+        --HeroCrash_vy = (Game.hauteur-HeroEXploseY)/5 * (HeroCrashFrame-2)
+      if math.floor(HeroExploseFrame) >= 10 then
         Game.myHero.status = "dead"
         --Game.ecran = "dead"
       end
     end
     
+    if bossExplose == true then
+      bossExploseFrame = bossExploseFrame + 0.2
+      if math.floor(bossExploseFrame) >= 24 then
+        bossExplose = false
+      end
+    end
+    
+    
   end
-  
   
 end
 
 
 function Game.draw()
   if Game.ecran == "start" then
-    love.graphics.draw(Game.imgStart, 0,0, 0, Game.largeur/Game.imgStart:getWidth(), Game.hauteur/Game.imgStart:getHeight())
+    love.graphics.draw(imgStart, 0,0, 0, Game.largeur/imgStart:getWidth(), Game.hauteur/imgStart:getHeight())
   
   elseif Game.ecran == "help" then
-    love.graphics.draw(Game.imgHelp, 0,0, 0, Game.largeur/Game.imgHelp:getWidth(), Game.hauteur/Game.imgHelp:getHeight())
+    love.graphics.draw(imgHelp, 0,0, 0, Game.largeur/imgHelp:getWidth(), Game.hauteur/imgHelp:getHeight())
   
   elseif Game.ecran == "winner" then
-    love.graphics.draw(Game.imgWin, 0,0, 0, Game.largeur/Game.imgWin:getWidth(), Game.hauteur/Game.imgWin:getHeight())  
+    love.graphics.draw(imgWin, 0,0, 0, Game.largeur/imgWin:getWidth(), Game.hauteur/imgWin:getHeight())  
   
   elseif Game.ecran == "playing" then  
     -- on dessine le background du niveau
@@ -355,73 +442,91 @@ function Game.draw()
         love.graphics.draw(alien.image, alien.x, alien.y, 0, 1,1)
       end
       if alien.type == "boss" then
-        love.graphics.draw(Game.imgBossEnergy, 900, 10, 0, 1,1)
+        love.graphics.draw(imgBossEnergy, 900, 10, 0, 1,1)
         love.graphics.rectangle("line", 970, 12, 200, 22)
         love.graphics.setColor(255,0,0)
         love.graphics.rectangle("fill", 970, 13, alien.energy, 20)
+        love.graphics.setColor(255,0,0, targetBossFade)
+        love.graphics.draw(targetBoss.image, targetBoss.x, targetBoss.y)
         love.graphics.setColor(255,255,255)
+        
         
       end
     end
     
     local n
-    for n=1,#Game.myHero.listeTirs do
-      local t = Game.myHero.listeTirs[n]
+    for n=1,#listeTirsHero do
+      local t = listeTirsHero[n]
       love.graphics.draw(t.image, t.x, t.y, 0, 0.5, 0.5)
     end
     
     local na
-    for na=1,#Game.listeTirsAlien do
-      local t = Game.listeTirsAlien[na]
+    for na=1,#listeTirsAlien do
+      local t = listeTirsAlien[na]
       love.graphics.draw(t.image, t.x, t.y, 0, 1, 1)
     end
     
     
-    for ex=#Game.alienExplose,1,-1 do
+    for ex=#alienExploseListe,1,-1 do
       local explo
-      explo = Game.alienExplose[ex]
+      explo = alienExploseListe[ex]
       love.graphics.draw(explo.listeFrames[math.floor(explo.frame)], explo.x, explo.y, 0, 2,2)
     end
-      
+    
     
     if Game.myHero.status == "playing" or Game.myHero.status == "warning" then
       love.graphics.draw(Game.myHero.image, Game.myHero.x, Game.myHero.y, 0, 1,1)
       
-      if Game.transition == true and Game.currentNiveau < Game.maxNiveau then
-        love.graphics.draw(Game.imgTransition, Game.largeur/2-Game.imgTransition:getWidth()/2, Game.hauteur/4)
+      if transition == true and currentNiveau < maxNiveau then
+        love.graphics.draw(imgTransition, Game.largeur/2-imgTransition:getWidth()/2, Game.hauteur/4)
       end
       
     end
     
+    if bossExplose == true then
+      local image = imgBossExplose[math.floor(bossExploseFrame)]
+      love.graphics.draw(imgBossExplose.image, image, targetBoss.x - 64*5, targetBoss.y-64*5, 0, 5,5)
+    end
+    
+    
     if Game.myHero.status == "warning" then
-      love.graphics.draw(Game.imgWarning, 300, 40, 0, 1.5,1.5)
+      love.graphics.draw(imgWarning, 300, 40, 0, 1.5,1.5)
     end
     
     if Game.myHero.status == "crashing" then
-      love.graphics.draw(Game.myHero.imgCrash[math.floor(Game.myHero.crashFrame)], Game.myHero.x+ math.random(-10,10), Game.myHero.y+ math.random(-10,10) + Game.myHero.crash_vy, 0, 3,3)
+      local image = imgHeroCrash[math.floor(HeroCrashFrame)]
+      love.graphics.draw(imgHeroCrash.image, image, HeroCrash_X, HeroCrash_Y, 0, 1,1)
     end
     
     if Game.myHero.status == "shooted" then
-      local image = Game.myHero.imgExplose[math.floor(Game.myHero.exploseFrame)]
+      local image = imgHeroExplose[math.floor(HeroExploseFrame)]
       love.graphics.draw(image, Game.myHero.x, Game.myHero.y-Game.myHero.image:getHeight()/2, 0, 0.5,0.5)
     end
     
     if Game.myHero.status == "dead" then
-      love.graphics.draw(Game.imgDead, Game.largeur/2-Game.imgDead:getWidth()/2, Game.hauteur/4)
+      love.graphics.draw(imgDead, Game.largeur/2-imgDead:getWidth()/2, Game.hauteur/4)
     end
     
     
       --love.graphics.print("nb enemy = "..#myNiveau.liste_enemy, 0,20)
-      --love.graphics.print("nb tirs = "..#Game.myHero.listeTirs, 0,0)
-      --love.graphics.print("transition: "..tostring(Game.transition), 0, 40)
-      --love.graphics.print("transition timer: "..Game.transitionTimer, 0, 60)
-      --love.graphics.print("niveau = "..Game.currentNiveau, 0, 80)
+      --love.graphics.print("nb tirs = "..#listeTirsHero, 0,0)
+      --love.graphics.print("transition: "..tostring(transition), 0, 40)
+      --love.graphics.print("transition timer: "..transitionTimer, 0, 60)
+      --love.graphics.print("niveau = "..currentNiveau, 0, 80)
       --love.graphics.print("ecran = "..Game.ecran, 120, 0)
       --love.graphics.print("status = "..Game.myHero.status, 120, 20)
       
-      --love.graphics.print("warningcount = "..Game.warningCount, 300, 0)
-      --love.graphics.print("alien explose = "..#Game.alienExplose, 300, 20)
-      --love.graphics.print("tirs alien = "..#Game.listeTirsAlien, 300, 40)
+      --love.graphics.print("warningcount = "..warningCount, 300, 0)
+      --love.graphics.print("alien explose = "..#alienExploseListe, 300, 20)
+      --love.graphics.print("tirs alien = "..#listeTirsAlien, 300, 40)
+      
+      --love.graphics.print("target X = "..targetBoss.x, 300, 100)
+      --love.graphics.print("target Y = "..targetBoss.y, 300, 120)
+      --love.graphics.print("target fade = "..targetBossFade, 300, 140)
+      
+      --love.graphics.print("boss exlose frame = "..math.floor(bossExploseFrame), 300, 140)
+      
+      
   end
 end
 

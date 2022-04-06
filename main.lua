@@ -43,8 +43,8 @@ function love.keypressed(key)
   if key == "space" then
     if myGame.ecran == "start" then
       myGame.ecran = "playing"
-    elseif myGame.ecran == "playing" and myGame.myHero.status == "playing" then
-      myGame.myHero.CreeTir()
+    elseif myGame.ecran == "playing" and (myGame.myHero.status == "playing" or myGame.myHero.status == "warning") then
+      myGame.CreeTirHero()
     elseif myGame.ecran == "playing" and myGame.myHero.status == "dead" then
       myGame.load()
     end

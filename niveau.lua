@@ -13,12 +13,26 @@ function niveau.setNiveau(pLevel)
     niveau.CreeEnemy(1, 2550, 150, false)
     niveau.CreeEnemy(1, 2550, 250, false)
     
+    niveau.CreeEnemy(4, 2900, 200, false)
+    niveau.CreeEnemy(4, 2950, 150, false)
+    niveau.CreeEnemy(4, 3000, 250, false)
+    niveau.CreeEnemy(4, 3100, 300, false)
+    niveau.CreeEnemy(4, 3150, 100, false)
+    niveau.CreeEnemy(4, 3200, 250, false)
+    niveau.CreeEnemy(4, 3100, 300, false)
+    niveau.CreeEnemy(4, 3150, 100, false)
+    niveau.CreeEnemy(4, 3200, 250, false)
+    
   elseif pLevel == 2 then
     niveau.image = love.graphics.newImage("images/niveau2.png")
     
     niveau.CreeEnemy(2, 2500, 200, false)
     niveau.CreeEnemy(2, 2550, 150, false)
     niveau.CreeEnemy(2, 2550, 250, false)
+    
+    niveau.CreeEnemy(4, 2900, 200, false)
+    niveau.CreeEnemy(4, 2950, 150, false)
+    niveau.CreeEnemy(4, 3000, 250, false)
   
   elseif pLevel == 3 then
     niveau.image = love.graphics.newImage("images/niveau3.png")
@@ -31,6 +45,19 @@ function niveau.setNiveau(pLevel)
     
   elseif pLevel == 4 then
     niveau.image = love.graphics.newImage("images/niveau4.png")
+    niveau.CreeEnemy(1, 2500, 200, true)
+    niveau.CreeEnemy(1, 2550, 150, true)
+    niveau.CreeEnemy(1, 2550, 250, true)
+    
+    niveau.CreeEnemy(4, 2900, 200, true)
+    niveau.CreeEnemy(4, 2950, 150, false)
+    niveau.CreeEnemy(4, 3000, 250, false)
+    niveau.CreeEnemy(4, 3100, 300, true)
+    niveau.CreeEnemy(4, 3150, 100, false)
+    niveau.CreeEnemy(4, 3200, 250, false)
+    niveau.CreeEnemy(4, 3100, 300, true)
+    niveau.CreeEnemy(4, 3150, 100, false)
+    niveau.CreeEnemy(4, 3200, 250, false)
   elseif pLevel == 5 then
     niveau.image = love.graphics.newImage("images/niveau5.png")
   elseif pLevel == 6 then
@@ -58,6 +85,7 @@ function niveau.CreeEnemy(pType, pX, pY, pTir)
   alien.x = pX
   alien.y = pY
   alien.energy = 10
+  alien.shooter = pTir
   alien.timerTir = 1
   alien.visible = false
   alien.boss = false
@@ -74,8 +102,13 @@ function niveau.CreeEnemy(pType, pX, pY, pTir)
   elseif alien.type == 3 then
     alien.vx = -4
     alien.vy = 4
+  
+  elseif alien.type == 4 then
+    alien.vx = -4
+    alien.vy = 0  
+    alien.energy = 20
     
-  elseif alien.type == "boss" then
+ elseif alien.type == "boss" then
     alien.vx = -4
     alien.vy = 0
     alien.energy = 200
